@@ -454,9 +454,9 @@ terminate(Reason, St) ->
 %%%-----------------------------------------------------------------------------
 
 handle_call(R, From, St) ->
-    lager:info("gen_esme start handle_call, pid ~p, req ~p", [self(), R]),
+    io:format("gen_esme start handle_call, pid ~p, req ~p~n", [self(), R]),
     Res = handle_call_real(R, From, St),
-    lager:info("gen_esme end handle_call"),
+    io:format("gen_esme end handle_call"),
     Res.
 
 handle_call_real({call, Req}, From, St) ->
@@ -509,9 +509,9 @@ handle_call_real({handle_enquire_link, _Pdu}, _From, St) ->
     {reply, ok, St}.
 
 handle_cast(R, St) ->
-    lager:info("gen_esme start handle_cast, pid ~p, req ~p", [self(), R]),
+    io:format("gen_esme start handle_cast, pid ~p, req ~p~n", [self(), R]),
     Res = handle_cast_real(R, St),
-    lager:info("gen_esme end handle_cast"),
+    io:format("gen_esme end handle_cast"),
     Res.
 
 handle_cast_real({cast, Req}, St) ->

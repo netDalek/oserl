@@ -287,9 +287,9 @@ bound_tx(R, St) ->
 
 
 bound_trx(R, St) ->
-    lager:info("gen_esme_session start bound_trx, pid ~p, req ~p", [self(), R]),
+    io:format("gen_esme_session start bound_trx, pid ~p, req ~p~n", [self(), R]),
     Res = bound_trx_real(R, St),
-    lager:info("gen_esme_session end bound_trx"),
+    io:format("gen_esme_session end bound_trx"),
     Res.
 
 bound_trx_real({?COMMAND_ID_ALERT_NOTIFICATION, _Pdu} = R, St) ->
@@ -398,9 +398,9 @@ esme_rinvbndsts_resp({CmdId, Pdu}, Sock, Log) ->
 %%%-----------------------------------------------------------------------------
 
 handle_event(R, Stn, Std) ->
-    lager:info("gen_esme_session start handle_event, pid ~p, req ~p", [self(), R]),
+    io:format("gen_esme_session start handle_event, pid ~p, req ~p~n", [self(), R]),
     Res = handle_event_real(R, Stn, Std),
-    lager:info("gen_esme_session end handle_event"),
+    io:format("gen_esme_session end handle_event"),
     Res.
 
 
@@ -529,9 +529,9 @@ handle_info(_Info, Stn, Std) ->
 
 
 handle_sync_event(R, From, Stn, Std) ->
-    lager:info("gen_esme_session start handle_sync_event, pid ~p, req ~p", [self(), R]),
+    io:format("gen_esme_session start handle_sync_event, pid ~p, req ~p~n", [self(), R]),
     Res = handle_sync_event_real(R, From, Stn, Std),
-    lager:info("gen_esme_session end handle_sync_event"),
+    io:format("gen_esme_session end handle_sync_event"),
     Res.
 
 
