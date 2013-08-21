@@ -452,9 +452,16 @@ terminate(Reason, St) ->
 %%%-----------------------------------------------------------------------------
 %%% HANDLE EXPORTS
 %%%-----------------------------------------------------------------------------
-handle_call({call, Req}, From, St) ->
-    pack((St#st.mod):handle_call(Req, From, St#st.mod_st), St);
-handle_call({start_session, Opts}, _From, St) ->
+
+handle_call(R, From, St) ->
+    lager:info("gen_esme start handle_call, pid ~p, req ~p", [self(), R]),
+    Res = handle_call_real(R, From, St),
+    lager:info("gen_esme end handle_call"),
+    Res.
+
+handle_call_real({call, Req}, From, St) ->
+    pack((St#st.mod):handle_call_real(Req, From, St#st.mod_st), St);
+handle_call_real({start_session, Opts}, _From, St) ->
     case gen_esme_session:start_link(?MODULE,  [{log, St#st.log} | Opts]) of
         {ok, Pid} ->
             Ref = erlang:monitor(process, Pid),
@@ -463,7 +470,7 @@ handle_call({start_session, Opts}, _From, St) ->
         Error ->
             {reply, Error, St}
     end;
-handle_call({{CmdName, Params} = Req, Args}, _From, St) ->
+handle_call_real({{CmdName, Params} = Req, Args}, _From, St) ->
     Ref = req_send(St#st.session, CmdName, Params),
     case pack((St#st.mod):handle_req(Req, Args, Ref, St#st.mod_st), St) of
         {noreply, NewSt} ->
@@ -473,7 +480,7 @@ handle_call({{CmdName, Params} = Req, Args}, _From, St) ->
         {stop, Reason, NewSt} ->
             {stop, ok, Reason, NewSt}
     end;
-handle_call(pause, _From, St) ->
+handle_call_real(pause, _From, St) ->
     try
         true = is_process_alive(St#st.consumer),
         ok = cl_consumer:pause(St#st.consumer)
@@ -482,29 +489,34 @@ handle_call(pause, _From, St) ->
             ok
     end,
     {reply, ok, St};
-handle_call({add_log_handler, Handler, Args}, _From, St) ->
+handle_call_real({add_log_handler, Handler, Args}, _From, St) ->
     {reply, smpp_log_mgr:add_handler(St#st.log, Handler, Args), St};
-handle_call({delete_log_handler, Handler, Args}, _From, St) ->
+handle_call_real({delete_log_handler, Handler, Args}, _From, St) ->
     {reply, smpp_log_mgr:delete_handler(St#st.log, Handler, Args), St};
-handle_call({swap_log_handler, Handler1, Handler2}, _From, St) ->
+handle_call_real({swap_log_handler, Handler1, Handler2}, _From, St) ->
     {reply, smpp_log_mgr:swap_handler(St#st.log, Handler1, Handler2), St};
-handle_call(rps_max, _From, St) ->
+handle_call_real(rps_max, _From, St) ->
     {reply, St#st.rps, St};
-handle_call({handle_accept, Addr}, From, St) ->
+handle_call_real({handle_accept, Addr}, From, St) ->
     pack((St#st.mod):handle_accept(Addr, From, St#st.mod_st), St);
-handle_call({handle_data_sm, Pdu}, From, St) ->
+handle_call_real({handle_data_sm, Pdu}, From, St) ->
     pack((St#st.mod):handle_data_sm(Pdu, From, St#st.mod_st), St);
-handle_call({handle_deliver_sm, Pdu}, From, St) ->
+handle_call_real({handle_deliver_sm, Pdu}, From, St) ->
     pack((St#st.mod):handle_deliver_sm(Pdu, From, St#st.mod_st), St);
-handle_call({handle_unbind, Pdu}, From, St) ->
+handle_call_real({handle_unbind, Pdu}, From, St) ->
     pack((St#st.mod):handle_unbind(Pdu, From, St#st.mod_st), St);
-handle_call({handle_enquire_link, _Pdu}, _From, St) ->
+handle_call_real({handle_enquire_link, _Pdu}, _From, St) ->
     {reply, ok, St}.
 
+handle_cast(R, St) ->
+    lager:info("gen_esme start handle_cast, pid ~p, req ~p", [self(), R]),
+    Res = handle_cast_real(R, St),
+    lager:info("gen_esme end handle_cast"),
+    Res.
 
-handle_cast({cast, Req}, St) ->
-    pack((St#st.mod):handle_cast(Req, St#st.mod_st), St);
-handle_cast(close, St) ->
+handle_cast_real({cast, Req}, St) ->
+    pack((St#st.mod):handle_cast_real(Req, St#st.mod_st), St);
+handle_cast_real(close, St) ->
     try
         true = is_process_alive(St#st.consumer),
         ok = cl_consumer:pause(St#st.consumer)
@@ -520,15 +532,15 @@ handle_cast(close, St) ->
             ok
     end,
     {noreply, St};
-handle_cast({{CmdName, Params} = Req, Args}, St) ->
+handle_cast_real({{CmdName, Params} = Req, Args}, St) ->
     Ref = req_send(St#st.session, CmdName, Params),
     pack((St#st.mod):handle_req(Req, Args, Ref, St#st.mod_st), St);
-handle_cast({handle_closed, Reason}, St) ->
+handle_cast_real({handle_closed, Reason}, St) ->
     NewSt = session_closed(St),
     pack((NewSt#st.mod):handle_closed(Reason, NewSt#st.mod_st), NewSt);
-handle_cast({handle_outbind, Pdu}, St) ->
+handle_cast_real({handle_outbind, Pdu}, St) ->
     pack((St#st.mod):handle_outbind(Pdu, St#st.mod_st), St);
-handle_cast(resume, St) ->
+handle_cast_real(resume, St) ->
     try
         true = is_process_alive(St#st.consumer),
         ok = cl_consumer:resume(St#st.consumer),
@@ -541,12 +553,12 @@ handle_cast(resume, St) ->
             {ok, Pid} = cl_consumer:start_link(QueueSrv, ReqFun, St#st.rps),
             {noreply, St#st{consumer = Pid}}
     end;
-handle_cast({rps_max, Rps}, St) ->
+handle_cast_real({rps_max, Rps}, St) ->
     ok = cl_consumer:rps(St#st.consumer, Rps),
     {noreply, St#st{rps = Rps}};
-handle_cast({handle_resp, Resp, Ref}, St) ->
+handle_cast_real({handle_resp, Resp, Ref}, St) ->
     pack((St#st.mod):handle_resp(Resp, Ref, St#st.mod_st), St);
-handle_cast({handle_alert_notification, Pdu}, St) ->
+handle_cast_real({handle_alert_notification, Pdu}, St) ->
     pack((St#st.mod):handle_alert_notification(Pdu, St#st.mod_st), St).
 
 

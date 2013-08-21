@@ -290,14 +290,21 @@ bound_tx(R, St) ->
     {next_state, bound_tx, St}.
 
 
-bound_trx({?COMMAND_ID_ALERT_NOTIFICATION, _Pdu} = R, St) ->
+
+bound_trx(R, St) ->
+    lager:info("gen_esme_session start bound_trx, pid ~p, req ~p", [self(), R]),
+    Res = bound_trx_real(R, St),
+    lager:info("gen_esme_session end bound_trx"),
+    Res.
+
+bound_trx_real({?COMMAND_ID_ALERT_NOTIFICATION, _Pdu} = R, St) ->
     handle_peer_alert_notification(R, St),
     {next_state, bound_trx, St};
-bound_trx({CmdId, _Pdu} = R, St)
+bound_trx_real({CmdId, _Pdu} = R, St)
   when CmdId == ?COMMAND_ID_DATA_SM; CmdId == ?COMMAND_ID_DELIVER_SM ->
     handle_peer_operation(R, St),
     {next_state, bound_trx, St};
-bound_trx({?COMMAND_ID_UNBIND, _Pdu} = R, St) ->
+bound_trx_real({?COMMAND_ID_UNBIND, _Pdu} = R, St) ->
     case handle_peer_unbind(R, St) of  % Synchronous
         true ->
             smpp_session:cancel_timer(St#st.inactivity_timer),
@@ -305,14 +312,14 @@ bound_trx({?COMMAND_ID_UNBIND, _Pdu} = R, St) ->
         false ->
             {next_state, bound_trx, St}
     end;
-bound_trx({timeout, _Ref, Timer}, St) ->
+bound_trx_real({timeout, _Ref, Timer}, St) ->
     case handle_timeout(Timer, St) of
         ok ->
             {next_state, bound_trx, St};
         {error, Reason} ->
             {stop, Reason, St}
     end;
-bound_trx(R, St) ->
+bound_trx_real(R, St) ->
     esme_rinvbndsts_resp(R, St#st.sock, St#st.log),
     {next_state, bound_trx, St}.
 
@@ -394,11 +401,19 @@ esme_rinvbndsts_resp({CmdId, Pdu}, Sock, Log) ->
 %%%-----------------------------------------------------------------------------
 %%% HANDLE EXPORTS
 %%%-----------------------------------------------------------------------------
-handle_event({input, CmdId, _Pdu, _Lapse, _Timestamp}, Stn, Std)
+
+handle_event(R, Stn, Std) ->
+    lager:info("gen_esme_session start handle_event, pid ~p, req ~p", [self(), R]),
+    Res = handle_event_real(R, Stn, Std),
+    lager:info("gen_esme_session end handle_event"),
+    Res.
+
+
+handle_event_real({input, CmdId, _Pdu, _Lapse, _Timestamp}, Stn, Std)
   when CmdId == ?COMMAND_ID_ENQUIRE_LINK_RESP ->
     smpp_session:cancel_timer(Std#st.enquire_link_resp_timer),
     {next_state, Stn, Std};
-handle_event({input, CmdId, Pdu, _Lapse, _Timestamp}, Stn, Std)
+handle_event_real({input, CmdId, Pdu, _Lapse, _Timestamp}, Stn, Std)
   when CmdId == ?COMMAND_ID_GENERIC_NACK ->
     smpp_session:cancel_timer(Std#st.enquire_link_resp_timer),  % In case it was set
     SeqNum = smpp_operation:get_value(sequence_number, Pdu),
@@ -417,7 +432,7 @@ handle_event({input, CmdId, Pdu, _Lapse, _Timestamp}, Stn, Std)
             true
     end,
     {next_state, Stn, Std};
-handle_event({input, CmdId, Pdu, _Lapse, _Timestamp}, Stn, Std)
+handle_event_real({input, CmdId, Pdu, _Lapse, _Timestamp}, Stn, Std)
   when ?IS_RESPONSE(CmdId) ->
     smpp_session:cancel_timer(Std#st.enquire_link_resp_timer),  % In case it was set
     SeqNum = smpp_operation:get_value(sequence_number, Pdu),
@@ -457,7 +472,7 @@ handle_event({input, CmdId, Pdu, _Lapse, _Timestamp}, Stn, Std)
             send_response(Nack, ?ESME_RINVCMDID, SeqNum, [], Sock, Log),
             {next_state, Stn, Std}
     end;
-handle_event({input, CmdId, Pdu, _Lapse, _Timestamp}, Stn, Std)
+handle_event_real({input, CmdId, Pdu, _Lapse, _Timestamp}, Stn, Std)
   when CmdId == ?COMMAND_ID_ENQUIRE_LINK ->
     smpp_session:cancel_timer(Std#st.enquire_link_resp_timer),  % In case it was set
     smpp_session:cancel_timer(Std#st.enquire_link_timer),
@@ -467,7 +482,7 @@ handle_event({input, CmdId, Pdu, _Lapse, _Timestamp}, Stn, Std)
     send_response(RespId, ?ESME_ROK, SeqNum, [], Std#st.sock, Std#st.log),
     T = smpp_session:start_timer(Std#st.timers, enquire_link_timer),
     {next_state, Stn, Std#st{enquire_link_timer = T}};
-handle_event({input, CmdId, Pdu, Lapse, Timestamp}, Stn, Std) ->
+handle_event_real({input, CmdId, Pdu, Lapse, Timestamp}, Stn, Std) ->
     smpp_session:cancel_timer(Std#st.enquire_link_resp_timer),  % In case it was set
     smpp_session:cancel_timer(Std#st.inactivity_timer),
     smpp_session:cancel_timer(Std#st.enquire_link_timer),
@@ -478,10 +493,10 @@ handle_event({input, CmdId, Pdu, Lapse, Timestamp}, Stn, Std) ->
     {next_state, Stn, Std#st{congestion_state = C,
                              enquire_link_timer = TE,
                              inactivity_timer = TI}};
-handle_event({error, CmdId, Status, _SeqNum}, _Stn, Std)
+handle_event_real({error, CmdId, Status, _SeqNum}, _Stn, Std)
   when ?IS_RESPONSE(CmdId) ->
     {stop, {command_status, Status}, Std};
-handle_event({error, CmdId, Status, SeqNum}, Stn, Std) ->
+handle_event_real({error, CmdId, Status, SeqNum}, Stn, Std) ->
     RespId = case ?VALID_COMMAND_ID(CmdId) of
                  true when CmdId /= ?COMMAND_ID_GENERIC_NACK ->
                      ?RESPONSE(CmdId);
@@ -490,17 +505,17 @@ handle_event({error, CmdId, Status, SeqNum}, Stn, Std) ->
              end,
     send_response(RespId, Status, SeqNum,[], Std#st.sock, Std#st.log),
     {next_state, Stn, Std};
-handle_event(?COMMAND_ID_ENQUIRE_LINK, Stn, Std) ->
+handle_event_real(?COMMAND_ID_ENQUIRE_LINK, Stn, Std) ->
     NewStd = send_enquire_link(Std),
     {next_state, Stn, NewStd};
-handle_event({sock_error, _Reason}, unbound, Std) ->
+handle_event_real({sock_error, _Reason}, unbound, Std) ->
     gen_tcp:close(Std#st.sock),
     {stop, normal, Std#st{sock = undefined}};
-handle_event({sock_error, Reason}, _Stn, Std) ->
+handle_event_real({sock_error, Reason}, _Stn, Std) ->
     gen_tcp:close(Std#st.sock),
     (Std#st.mod):handle_closed(Std#st.esme, Reason),
     {stop, normal, Std#st{sock = undefined}};
-handle_event({listen_error, Reason}, _Stn, Std) ->
+handle_event_real({listen_error, Reason}, _Stn, Std) ->
     {stop, Reason, Std}.
 
 
@@ -515,9 +530,16 @@ handle_info(_Info, Stn, Std) ->
     {next_state, Stn, Std}.
 
 
-handle_sync_event({stop, Reason}, _From, _Stn, Std) ->
+handle_sync_event(R, From, Stn, Std) ->
+    lager:info("gen_esme_session start handle_sync_event, pid ~p, req ~p", [self(), R]),
+    Res = handle_sync_event_real(R, From, Stn, Std),
+    lager:info("gen_esme_session end handle_sync_event"),
+    Res.
+
+
+handle_sync_event_real({stop, Reason}, _From, _Stn, Std) ->
     {stop, Reason, ok, Std};
-handle_sync_event({reply, {SeqNum, Reply}}, _From, Stn, Std) ->
+handle_sync_event_real({reply, {SeqNum, Reply}}, _From, Stn, Std) ->
     {ok, {SeqNum, CmdId}} = smpp_req_tab:read(Std#st.op_tab, SeqNum),
     RespId = ?RESPONSE(CmdId),
     Sock = Std#st.sock,
@@ -531,7 +553,7 @@ handle_sync_event({reply, {SeqNum, Reply}}, _From, Stn, Std) ->
             send_response(RespId, Error, SeqNum, [], Sock, Log)
     end,
     {reply, ok, Stn, Std};
-handle_sync_event({CmdId, Params}, From, Stn, Std) ->
+handle_sync_event_real({CmdId, Params}, From, Stn, Std) ->
     NewStd = send_request(CmdId, Params, From, Std),
     {next_state, Stn, NewStd}.
 
