@@ -460,7 +460,7 @@ handle_call(R, From, St) ->
     Res.
 
 handle_call_real({call, Req}, From, St) ->
-    pack((St#st.mod):handle_call_real(Req, From, St#st.mod_st), St);
+    pack((St#st.mod):handle_call(Req, From, St#st.mod_st), St);
 handle_call_real({start_session, Opts}, _From, St) ->
     case gen_esme_session:start_link(?MODULE,  [{log, St#st.log} | Opts]) of
         {ok, Pid} ->
@@ -515,7 +515,7 @@ handle_cast(R, St) ->
     Res.
 
 handle_cast_real({cast, Req}, St) ->
-    pack((St#st.mod):handle_cast_real(Req, St#st.mod_st), St);
+    pack((St#st.mod):handle_cast(Req, St#st.mod_st), St);
 handle_cast_real(close, St) ->
     try
         true = is_process_alive(St#st.consumer),
