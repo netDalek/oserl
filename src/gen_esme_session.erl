@@ -669,17 +669,21 @@ send_enquire_link(St) ->
 send_request(CmdId, Params, Ref, St) ->
     SeqNum = ?INCR_SEQUENCE_NUMBER(St#st.sequence_number),
     Pdu = smpp_operation:new(CmdId, SeqNum, Params),
+    lager:info("send_request: pack", []),
     case smpp_operation:pack(Pdu) of
         {ok, BinPdu} ->
             smpp_session:cancel_timer(St#st.inactivity_timer),
             smpp_session:cancel_timer(St#st.enquire_link_timer),
+            lager:info("send_request: before send_pdu", []),
             ok = smpp_session:send_pdu(St#st.sock, BinPdu, St#st.log),
             RTimer = smpp_session:start_timer(St#st.timers, {response_timer, SeqNum}),
+            lager:info("send_request: before tab write", []),
             ok = smpp_req_tab:write(St#st.req_tab, {SeqNum, CmdId, RTimer, Ref}),
             St#st{sequence_number = SeqNum,
                   enquire_link_timer = smpp_session:start_timer(St#st.timers, enquire_link_timer),
                   inactivity_timer = smpp_session:start_timer(St#st.timers, inactivity_timer)};
         {error, _CmdId, Status, _SeqNum} ->
+            lager:info("send_request: before handle_peer_resp", []),
             handle_peer_resp({error, {command_status, Status}}, Ref, St),
             St
     end.
