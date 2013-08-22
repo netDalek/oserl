@@ -48,9 +48,7 @@
 %%% SMPP EXPORTS
 -export([alert_notification/3,
          data_sm/4,
-         data_sm/5,
          deliver_sm/4,
-         deliver_sm/5,
          outbind/4,
          outbind/5,
          unbind/3]).
@@ -181,20 +179,11 @@ close(SrvRef, Session) ->
 alert_notification(SrvRef, Session, Params) ->
     gen_server:cast(SrvRef, {{alert_notification, Params}, Session}).
 
-
 data_sm(SrvRef, Session, Params, Args) ->
-    data_sm(SrvRef, Session, Params, Args, ?ASSERT_TIME).
-
-data_sm(SrvRef, Session, Params, Args, Timeout) ->
-    gen_server:call(SrvRef, {{{data_sm, Params}, Args}, Session},  Timeout).
-
+    gen_server:cast(SrvRef, {{{data_sm, Params}, Args}, Session}).
 
 deliver_sm(SrvRef, Session, Params, Args) ->
-    deliver_sm(SrvRef, Session, Params, Args, ?ASSERT_TIME).
-
-deliver_sm(SrvRef, Session, Params, Args, Timeout) ->
-    gen_server:call(SrvRef, {{{deliver_sm, Params}, Args}, Session}, Timeout).
-
+    gen_server:cast(SrvRef, {{{deliver_sm, Params}, Args}, Session}).
 
 outbind(SrvRef, Addr, Opts, Params) ->
     outbind(SrvRef, Addr, Opts, Params, ?ASSERT_TIME).
@@ -386,9 +375,9 @@ handle_cast({close, Pid}, St) ->
 handle_cast({{alert_notification, Params}, Pid}, St) ->
     ok = req_send(Pid, alert_notification, Params),
     {noreply, St};
-handle_cast({{{unbind, Params}, Args}, Pid}, St) ->
-    Ref = req_send(Pid, unbind, Params),
-    pack((St#st.mod):handle_req(Pid, unbind, Args, Ref, St#st.mod_st), St);
+handle_cast({{{CmdName, Params} = Req, Args}, Pid}, St) ->
+    Ref = req_send(Pid, CmdName, Params),
+    pack((St#st.mod):handle_req(Pid, Req, Args, Ref, St#st.mod_st), St);
 handle_cast({{rps, Rps}, Pid}, St) ->
     Sss = session(Pid, St#st.sessions),
     L = session_update(Sss#session{rps = Rps}, St#st.sessions),
@@ -521,7 +510,6 @@ pack(Other, _St) ->
 queue(_SrvRef, Session, Req, Args, Priority) ->
     QueueSrv = cl_queue_tab:lookup(Session),
     ok = cl_queue_srv:in(QueueSrv, {Req, Args}, Priority).
-
 
 ref_to_pid(Ref) when is_pid(Ref) ->
     Ref;

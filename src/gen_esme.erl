@@ -50,23 +50,14 @@
          bind_transceiver/3,
          bind_transmitter/3,
          broadcast_sm/3,
-         broadcast_sm/4,
          cancel_broadcast_sm/3,
-         cancel_broadcast_sm/4,
          cancel_sm/3,
-         cancel_sm/4,
          data_sm/3,
-         data_sm/4,
          query_broadcast_sm/3,
-         query_broadcast_sm/4,
          query_sm/3,
-         query_sm/4,
          replace_sm/3,
-         replace_sm/4,
          submit_multi/3,
-         submit_multi/4,
          submit_sm/3,
-         submit_sm/4,
          unbind/2]).
 
 %%% QUEUE EXPORTS
@@ -233,66 +224,39 @@ bind_transmitter(SrvRef, Params, Args) ->
 
 
 broadcast_sm(SrvRef, Params, Args) ->
-    broadcast_sm(SrvRef, Params, Args, ?ASSERT_TIME).
-
-broadcast_sm(SrvRef, Params, Args, Timeout) ->
-    gen_server:call(SrvRef, {{broadcast_sm, Params}, Args}, Timeout).
+    gen_server:cast(SrvRef, {{broadcast_sm, Params}, Args}).
 
 
 cancel_broadcast_sm(SrvRef, Params, Args) ->
-    cancel_broadcast_sm(SrvRef, Params, Args, ?ASSERT_TIME).
-
-cancel_broadcast_sm(SrvRef, Params, Args, Timeout) ->
-    gen_server:call(SrvRef, {{cancel_broadcast_sm, Params}, Args}, Timeout).
+    gen_server:cast(SrvRef, {{cancel_broadcast_sm, Params}, Args}).
 
 
 cancel_sm(SrvRef, Params, Args) ->
-    cancel_sm(SrvRef, Params, Args, ?ASSERT_TIME).
-
-cancel_sm(SrvRef, Params, Args, Timeout) ->
-    gen_server:call(SrvRef, {{cancel_sm, Params}, Args}, Timeout).
+    gen_server:cast(SrvRef, {{cancel_sm, Params}, Args}).
 
 
 data_sm(SrvRef, Params, Args) ->
-    data_sm(SrvRef, Params, Args, ?ASSERT_TIME).
-
-data_sm(SrvRef, Params, Args, Timeout) ->
-    gen_server:call(SrvRef, {{data_sm, Params}, Args}, Timeout).
+    gen_server:cast(SrvRef, {{data_sm, Params}, Args}).
 
 
 query_broadcast_sm(SrvRef, Params, Args) ->
-    query_broadcast_sm(SrvRef, Params, Args, ?ASSERT_TIME).
-
-query_broadcast_sm(SrvRef, Params, Args, Timeout) ->
-    gen_server:call(SrvRef, {{query_broadcast_sm, Params}, Args}, Timeout).
+    gen_server:cast(SrvRef, {{query_broadcast_sm, Params}, Args}).
 
 
 query_sm(SrvRef, Params, Args) ->
-    query_sm(SrvRef, Params, Args, ?ASSERT_TIME).
-
-query_sm(SrvRef, Params, Args, Timeout) ->
-    gen_server:call(SrvRef, {{query_sm, Params}, Args}, Timeout).
+    gen_server:cast(SrvRef, {{query_sm, Params}, Args}).
 
 
 replace_sm(SrvRef, Params, Args) ->
-    replace_sm(SrvRef, Params, Args, ?ASSERT_TIME).
-
-replace_sm(SrvRef, Params, Args, Timeout) ->
-    gen_server:call(SrvRef, {{replace_sm, Params}, Args}, Timeout).
+    gen_server:cast(SrvRef, {{replace_sm, Params}, Args}).
 
 
 submit_multi(SrvRef, Params, Args) ->
-    submit_multi(SrvRef, Params, Args, ?ASSERT_TIME).
-
-submit_multi(SrvRef, Params, Args, Timeout) ->
-    gen_server:call(SrvRef, {{submit_multi, Params}, Args}, Timeout).
+    gen_server:cast(SrvRef, {{submit_multi, Params}, Args}).
 
 
 submit_sm(SrvRef, Params, Args) ->
-    submit_sm(SrvRef, Params, Args, ?ASSERT_TIME).
-
-submit_sm(SrvRef, Params, Args, Timeout) ->
-    gen_server:call(SrvRef, {{submit_sm, Params}, Args}, Timeout).
+    gen_server:cast(SrvRef, {{submit_sm, Params}, Args}).
 
 
 unbind(SrvRef, Args) ->
