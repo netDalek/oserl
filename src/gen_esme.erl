@@ -60,36 +60,8 @@
          submit_sm/3,
          unbind/2]).
 
-%%% QUEUE EXPORTS
--export([queue_broadcast_sm/3,
-         queue_broadcast_sm/4,
-         queue_cancel_broadcast_sm/3,
-         queue_cancel_broadcast_sm/4,
-         queue_cancel_sm/3,
-         queue_cancel_sm/4,
-         queue_data_sm/3,
-         queue_data_sm/4,
-         queue_len/1,
-         queue_out/1,
-         queue_out/2,
-         queue_out_r/1,
-         queue_out_r/2,
-         queue_query_broadcast_sm/3,
-         queue_query_broadcast_sm/4,
-         queue_query_sm/3,
-         queue_query_sm/4,
-         queue_replace_sm/3,
-         queue_replace_sm/4,
-         queue_submit_multi/3,
-         queue_submit_multi/4,
-         queue_submit_sm/3,
-         queue_submit_sm/4]).
-
 %%% LOG EXPORTS
 -export([add_log_handler/3, delete_log_handler/3, swap_log_handler/3]).
-
-%%% RPS EXPORTS
--export([pause/1, resume/1, rps/1, rps_avg/1, rps_max/1, rps_max/2]).
 
 %%% INIT/TERMINATE EXPORTS
 -export([init/1, terminate/2]).
@@ -110,13 +82,8 @@
          handle_resp/3,
          handle_unbind/2]).
 
-%%% MACROS
--define(PRIORITY, 10).
--define(RPS, 1000).
--define(SECOND, 1000).
-
 %%% RECORDS
--record(st, {mod, mod_st, ref, session, consumer, rps, log}).
+-record(st, {mod, mod_st, ref, session, log}).
 
 %%%-----------------------------------------------------------------------------
 %%% BEHAVIOUR EXPORTS
@@ -263,92 +230,6 @@ unbind(SrvRef, Args) ->
     gen_server:cast(SrvRef, {{unbind, []}, Args}).
 
 %%%-----------------------------------------------------------------------------
-%%% QUEUE EXPORTS
-%%%-----------------------------------------------------------------------------
-queue_broadcast_sm(SrvRef, Params, Args) ->
-    queue_broadcast_sm(SrvRef, Params, Args, ?PRIORITY).
-
-queue_broadcast_sm(SrvRef, Params, Args, Priority) ->
-    queue(SrvRef, {broadcast_sm, Params}, Args, Priority).
-
-
-queue_cancel_broadcast_sm(SrvRef, Params, Args) ->
-    queue_cancel_broadcast_sm(SrvRef, Params, Args, ?PRIORITY).
-
-queue_cancel_broadcast_sm(SrvRef, Params, Args, Priority) ->
-    queue(SrvRef, {cancel_broadcast_sm, Params}, Args, Priority).
-
-
-queue_cancel_sm(SrvRef, Params, Args) ->
-    queue_cancel_sm(SrvRef, Params, Args, ?PRIORITY).
-
-queue_cancel_sm(SrvRef, Params, Args, Priority) ->
-    queue(SrvRef, {cancel_sm, Params}, Args, Priority).
-
-
-queue_data_sm(SrvRef, Params, Args) ->
-    queue_data_sm(SrvRef, Params, Args, ?PRIORITY).
-
-queue_data_sm(SrvRef, Params, Args, Priority) ->
-    queue(SrvRef, {data_sm, Params}, Args, Priority).
-
-
-queue_len(SrvRef) ->
-    QueueSrv = cl_queue_tab:lookup(ref_to_pid(SrvRef)),
-    cl_queue_srv:len(QueueSrv).
-
-
-queue_out(SrvRef) ->
-    queue_out(SrvRef, 1).
-
-queue_out(SrvRef, Num) ->
-    QueueSrv = cl_queue_tab:lookup(ref_to_pid(SrvRef)),
-    cl_queue_srv:out(QueueSrv, Num).
-
-
-queue_out_r(SrvRef) ->
-    queue_out_r(SrvRef, 1).
-
-queue_out_r(SrvRef, Num) ->
-    QueueSrv = cl_queue_tab:lookup(ref_to_pid(SrvRef)),
-    cl_queue_srv:out_r(QueueSrv, Num).
-
-
-queue_query_broadcast_sm(SrvRef, Params, Args) ->
-    queue_query_broadcast_sm(SrvRef, Params, Args, ?PRIORITY).
-
-queue_query_broadcast_sm(SrvRef, Params, Args, Priority) ->
-    queue(SrvRef, {query_broadcast_sm, Params}, Args, Priority).
-
-
-queue_query_sm(SrvRef, Params, Args) ->
-    queue_query_sm(SrvRef, Params, Args, ?PRIORITY).
-
-queue_query_sm(SrvRef, Params, Args, Priority) ->
-    queue(SrvRef, {query_sm, Params}, Args, Priority).
-
-
-queue_replace_sm(SrvRef, Params, Args) ->
-    queue_replace_sm(SrvRef, Params, Args, ?PRIORITY).
-
-queue_replace_sm(SrvRef, Params, Args, Priority) ->
-    queue(SrvRef, {replace_sm, Params}, Args, Priority).
-
-
-queue_submit_multi(SrvRef, Params, Args) ->
-    queue_submit_multi(SrvRef, Params, Args, ?PRIORITY).
-
-queue_submit_multi(SrvRef, Params, Args, Priority) ->
-    queue(SrvRef, {submit_multi, Params}, Args, Priority).
-
-
-queue_submit_sm(SrvRef, Params, Args) ->
-    queue_submit_sm(SrvRef, Params, Args, ?PRIORITY).
-
-queue_submit_sm(SrvRef, Params, Args, Priority) ->
-    queue(SrvRef, {submit_sm, Params}, Args, Priority).
-
-%%%-----------------------------------------------------------------------------
 %%% LOG EXPORTS
 %%%-----------------------------------------------------------------------------
 add_log_handler(SrvRef, Handler, Args) ->
@@ -363,50 +244,11 @@ swap_log_handler(SrvRef, Handler1, Handler2) ->
     gen_server:call(SrvRef, {swap_log_handler, Handler1, Handler2}, infinity).
 
 %%%-----------------------------------------------------------------------------
-%%% RPS EXPORTS
-%%%-----------------------------------------------------------------------------
-pause(SrvRef) ->
-    gen_server:call(SrvRef, pause, infinity).
-
-
-resume(SrvRef) ->
-    QueueSrv = cl_queue_tab:lookup(ref_to_pid(SrvRef)),
-    cl_queue_srv:count_reset(QueueSrv),
-    gen_server:cast(SrvRef, resume).
-
-
-rps(SrvRef) ->
-    QueueSrv = cl_queue_tab:lookup(ref_to_pid(SrvRef)),
-    cl_queue_srv:rps(QueueSrv).
-
-
-rps_avg(SrvRef) ->
-    QueueSrv = cl_queue_tab:lookup(ref_to_pid(SrvRef)),
-    cl_queue_srv:rps_avg(QueueSrv).
-
-
-rps_max(SrvRef) ->
-    gen_server:call(SrvRef, rps_max, infinity).
-
-
-rps_max(SrvRef, Rps) ->
-    QueueSrv = cl_queue_tab:lookup(ref_to_pid(SrvRef)),
-    cl_queue_srv:count_reset(QueueSrv),
-    gen_server:cast(SrvRef, {rps_max, Rps}).
-
-%%%-----------------------------------------------------------------------------
 %%% INIT/TERMINATE EXPORTS
 %%%-----------------------------------------------------------------------------
-init({Mod, Args, Opts}) ->
+init({Mod, Args, _Opts}) ->
     {ok, Log} = smpp_log_mgr:start_link(),
-    {ok, QueueSrv} = case proplists:get_value(file_queue, Opts) of
-                         undefined ->
-                             cl_queue_srv:start_link();
-                         File ->
-                             cl_queue_srv:start_link(File)
-                     end,
-    true = cl_queue_tab:insert(QueueSrv),
-    St = #st{mod = Mod, rps = proplists:get_value(rps, Opts, ?RPS), log = Log},
+    St = #st{mod = Mod, log = Log},
     pack((St#st.mod):init(Args), St).
 
 
@@ -437,23 +279,12 @@ handle_call({{CmdName, Params} = Req, Args}, _From, St) ->
         {stop, Reason, NewSt} ->
             {stop, ok, Reason, NewSt}
     end;
-handle_call(pause, _From, St) ->
-    try
-        true = is_process_alive(St#st.consumer),
-        ok = cl_consumer:pause(St#st.consumer)
-    catch
-        error:_NotAlive ->
-            ok
-    end,
-    {reply, ok, St};
 handle_call({add_log_handler, Handler, Args}, _From, St) ->
     {reply, smpp_log_mgr:add_handler(St#st.log, Handler, Args), St};
 handle_call({delete_log_handler, Handler, Args}, _From, St) ->
     {reply, smpp_log_mgr:delete_handler(St#st.log, Handler, Args), St};
 handle_call({swap_log_handler, Handler1, Handler2}, _From, St) ->
     {reply, smpp_log_mgr:swap_handler(St#st.log, Handler1, Handler2), St};
-handle_call(rps_max, _From, St) ->
-    {reply, St#st.rps, St};
 handle_call({handle_accept, Addr}, From, St) ->
     pack((St#st.mod):handle_accept(Addr, From, St#st.mod_st), St);
 handle_call({handle_data_sm, Pdu}, From, St) ->
@@ -470,13 +301,6 @@ handle_cast({cast, Req}, St) ->
     pack((St#st.mod):handle_cast(Req, St#st.mod_st), St);
 handle_cast(close, St) ->
     try
-        true = is_process_alive(St#st.consumer),
-        ok = cl_consumer:pause(St#st.consumer)
-    catch
-        error:_ConsumerNotAlive ->
-            ok
-    end,
-    try
         true = is_process_alive(St#st.session),
         ok = gen_esme_session:stop(St#st.session)
     catch
@@ -492,22 +316,6 @@ handle_cast({handle_closed, Reason}, St) ->
     pack((NewSt#st.mod):handle_closed(Reason, NewSt#st.mod_st), NewSt);
 handle_cast({handle_outbind, Pdu}, St) ->
     pack((St#st.mod):handle_outbind(Pdu, St#st.mod_st), St);
-handle_cast(resume, St) ->
-    try
-        true = is_process_alive(St#st.consumer),
-        ok = cl_consumer:resume(St#st.consumer),
-        {noreply, St}
-    catch
-        error:_NotAlive ->
-            QueueSrv = cl_queue_tab:lookup(),
-            Self = self(),
-            ReqFun = fun(X) -> gen_server:call(Self, X, ?ASSERT_TIME) end,
-            {ok, Pid} = cl_consumer:start_link(QueueSrv, ReqFun, St#st.rps),
-            {noreply, St#st{consumer = Pid}}
-    end;
-handle_cast({rps_max, Rps}, St) ->
-    ok = cl_consumer:rps(St#st.consumer, Rps),
-    {noreply, St#st{rps = Rps}};
 handle_cast({handle_resp, Resp, Ref}, St) ->
     pack((St#st.mod):handle_resp(Resp, Ref, St#st.mod_st), St);
 handle_cast({handle_alert_notification, Pdu}, St) ->
@@ -585,11 +393,6 @@ pack(Other, _St) ->
     Other.
 
 
-queue(SrvRef, Req, Args, Priority) ->
-    QueueSrv = cl_queue_tab:lookup(ref_to_pid(SrvRef)),
-    ok = cl_queue_srv:in(QueueSrv, {Req, Args}, Priority).
-
-
 ref_to_pid(Ref) when is_pid(Ref) ->
     Ref;
 ref_to_pid(Ref) when is_atom(Ref) ->
@@ -640,14 +443,12 @@ req_send(Pid, CmdName, Params) ->
 
 session_closed(St) ->
     try
-        erlang:demonitor(St#st.ref, [flush]),
-        true = is_process_alive(St#st.consumer),
-        ok = cl_consumer:stop(St#st.consumer)
+        erlang:demonitor(St#st.ref, [flush])
     catch
         error:_NotAlive ->
             ok
     end,
-    St#st{ref = undefined, session = undefined, consumer = undefined}.
+    St#st{ref = undefined, session = undefined}.
 
 
 split_options(L) ->

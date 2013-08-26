@@ -36,9 +36,6 @@
 %%% START/STOP EXPORTS
 -export([start_link/0, start_link/1]).
 
-%%% RPS EXPORTS
--export([rps_avg/0, rps/0, rps_max/1]).
-
 %%% EXTERNAL EXPORTS
 -export([failure/0, reset/0, send/4, silent/1, success/0]).
 
@@ -88,22 +85,8 @@ start_link() ->
     start_link(true).
 
 start_link(Silent) ->
-    Opts = [{rps, 1}, {queue_file, "./sample_esme.dqueue"}],
+    Opts = [{}, {queue_file, "./sample_esme.dqueue"}],
     gen_esme:start_link({local, ?MODULE}, ?MODULE, [Silent], Opts).
-
-%%%-----------------------------------------------------------------------------
-%%% RPS EXPORTS
-%%%-----------------------------------------------------------------------------
-rps_avg() ->
-    gen_esme:rps_avg(?MODULE).
-
-
-rps() ->
-    gen_esme:rps(?MODULE).
-
-
-rps_max(Rps) ->
-    gen_esme:rps_max(?MODULE, Rps).
 
 %%%-----------------------------------------------------------------------------
 %%% EXTERNAL EXPORTS
@@ -229,7 +212,6 @@ handle_resp({ok, PduResp}, Ref, #st{bind_req = Ref} = St) ->
     format(St#st.silent, "Bound to ~s~n", [SystemId]),
     Retry = fun({{_, Params}, Args, _}) -> submit(Params, Args, ?HIGH) end,
     lists:foreach(Retry, St#st.reqs),
-    gen_esme:resume(?MODULE),
     {noreply, St#st{reqs = []}};
 handle_resp({error, {command_status, Status}}, Ref, #st{bind_req = Ref} = St) ->
     Reason = smpp_error:format(Status),

@@ -44,12 +44,6 @@
 %%% SMPP EXPORTS
 -export([alert_notification/1, data_sm/1, deliver_sm/1, outbind/3, unbind/0]).
 
-%%% QUEUE EXPORTS
--export([queue_data_sm/1, queue_deliver_sm/1]).
-
-%%% RPS EXPORTS
--export([resume/0, pause/0, rps/0, rps_max/0, rps_max/1]).
-
 %%% STATUS EXPORTS
 -export([failure/0, reset/0, silent/1, success/0]).
 
@@ -141,43 +135,6 @@ outbind(Addr, Port, Params) ->
 
 unbind() ->
     gen_mc:unbind(?MODULE).
-
-%%%-----------------------------------------------------------------------------
-%%% QUEUE EXPORTS
-%%%-----------------------------------------------------------------------------
-queue_data_sm(Params) ->
-    F = fun(X) -> gen_mc:queue_data_sm(?MODULE, X, Params, []) end,
-    lists:foreach(F, gen_mc:call(?MODULE, rxs)).
-
-
-queue_deliver_sm(Params) ->
-    F = fun(X) -> gen_mc:queue_deliver_sm(?MODULE, X, Params, []) end,
-    lists:foreach(F, gen_mc:call(?MODULE, rxs)).
-
-%%%-----------------------------------------------------------------------------
-%%% RPS EXPORTS
-%%%-----------------------------------------------------------------------------
-resume() ->
-    F = fun(X) -> gen_mc:resume(?MODULE, X) end,
-    lists:foreach(F, gen_mc:call(?MODULE, rxs)).
-
-
-pause() ->
-    F = fun(X) -> gen_mc:pause(?MODULE, X) end,
-    lists:foreach(F, gen_mc:call(?MODULE, rxs)).
-
-
-rps() ->
-    [gen_mc:rps(?MODULE, X) || X <- gen_mc:call(?MODULE, rxs)].
-
-
-rps_max() ->
-    [gen_mc:rps_max(?MODULE, X) || X <- gen_mc:call(?MODULE, rxs)].
-
-
-rps_max(RpsMax) ->
-    F = fun(X) -> gen_mc:rps_max(?MODULE, X, RpsMax) end,
-    lists:foreach(F, gen_mc:call(?MODULE, rxs)).
 
 %%%-----------------------------------------------------------------------------
 %%% STATUS EXPORTS

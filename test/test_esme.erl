@@ -44,9 +44,6 @@
 %%% SEND EXPORTS
 -export([send/4]).
 
-%%% RPS EXPORTS
--export([pause/0, resume/0, rps_avg/0, rps/0, rps_max/0, rps_max/1]).
-
 %%% STATUS EXPORTS
 -export([bound/0, failure/0, recv/0, reset/0, silent/1, success/0]).
 
@@ -61,29 +58,6 @@
          submit_multi/1,
          submit_sm/1,
          submit_sm/2]).
-
-%%% QUEUE EXPORTS
--export([queue_broadcast_sm/1,
-         queue_broadcast_sm/2,
-         queue_cancel_broadcast_sm/1,
-         queue_cancel_broadcast_sm/2,
-         queue_cancel_sm/1,
-         queue_cancel_sm/2,
-         queue_data_sm/1,
-         queue_data_sm/2,
-         queue_len/0,
-         queue_out/0,
-         queue_out/1,
-         queue_query_broadcast_sm/1,
-         queue_query_broadcast_sm/2,
-         queue_query_sm/1,
-         queue_query_sm/2,
-         queue_replace_sm/1,
-         queue_replace_sm/2,
-         queue_submit_multi/1,
-         queue_submit_multi/2,
-         queue_submit_sm/1,
-         queue_submit_sm/2]).
 
 %%% LOG EXPORTS
 -export([add_log_handler/1, delete_log_handler/1, swap_log_handler/2]).
@@ -144,7 +118,7 @@ start_link(Mode) ->
     start_link(Mode, true).
 
 start_link(Mode, Silent) ->
-    Opts = [{rps, 1}, {queue_file, "./sample_esme.dqueue"}],
+    Opts = [{}, {}],
     gen_esme:start_link({local, ?MODULE}, ?MODULE, [Mode, Silent], Opts).
 
 
@@ -158,32 +132,6 @@ send(Src, Dest, Msg, Opts) ->
     Params = params(Src, Dest),
     Priority = proplists:get_value(priority, Opts, ?LOW),
     submit(Msg, Params, [], Priority).
-
-%%%-----------------------------------------------------------------------------
-%%% RPS EXPORTS
-%%%-----------------------------------------------------------------------------
-pause() ->
-    gen_esme:pause(?MODULE).
-
-
-resume() ->
-    gen_esme:resume(?MODULE).
-
-
-rps_avg() ->
-    gen_esme:rps_avg(?MODULE).
-
-
-rps() ->
-    gen_esme:rps(?MODULE).
-
-
-rps_max() ->
-    gen_esme:rps_max(?MODULE).
-
-
-rps_max(Rps) ->
-    gen_esme:rps_max(?MODULE, Rps).
 
 %%%-----------------------------------------------------------------------------
 %%% STATUS EXPORTS
@@ -293,114 +241,6 @@ submit_sm(_Params, 0) ->
 submit_sm(Params, N) ->
     submit_sm(Params),
     submit_sm(Params, N -1).
-
-%%%-----------------------------------------------------------------------------
-%%% QUEUE EXPORTS
-%%%-----------------------------------------------------------------------------
-queue_broadcast_sm(Params) ->
-    gen_esme:queue_broadcast_sm(?MODULE, Params, []).
-
-queue_broadcast_sm(Params, Priority) ->
-    gen_esme:queue_broadcast_sm(?MODULE, Params, [], Priority).
-
-
-queue_cancel_broadcast_sm(Params) ->
-    gen_esme:queue_cancel_broadcast_sm(?MODULE, Params, []).
-
-queue_cancel_broadcast_sm(Params, Priority) ->
-    gen_esme:queue_cancel_broadcast_sm(?MODULE, Params, [], Priority).
-
-
-queue_cancel_sm(Params) ->
-    gen_esme:queue_cancel_sm(?MODULE, Params, []).
-
-queue_cancel_sm(Params, Priority) ->
-    gen_esme:queue_cancel_sm(?MODULE, Params, [], Priority).
-
-
-queue_data_sm(Params) ->
-    gen_esme:queue_data_sm(?MODULE, Params, []).
-
-queue_data_sm(Params, Priority) ->
-    gen_esme:queue_data_sm(?MODULE, Params, [], Priority).
-
-
-queue_len() ->
-    gen_esme:queue_len(?MODULE).
-
-
-queue_out() ->
-    gen_esme:queue_out(?MODULE).
-
-queue_out(Num) ->
-    gen_esme:queue_out(?MODULE, Num).
-
-
-queue_query_broadcast_sm(Params) ->
-    gen_esme:queue_query_broadcast_sm(?MODULE, Params, []).
-
-queue_query_broadcast_sm(Params, Priority) ->
-    gen_esme:queue_query_broadcast_sm(?MODULE, Params, [], Priority).
-
-
-queue_query_sm(Params) ->
-    gen_esme:queue_query_sm(?MODULE, Params, []).
-
-queue_query_sm(Params, Priority) ->
-    gen_esme:queue_query_sm(?MODULE, Params, [], Priority).
-
-
-queue_replace_sm(Params) ->
-    gen_esme:queue_replace_sm(?MODULE, Params, []).
-
-queue_replace_sm(Params, Priority) ->
-    gen_esme:queue_replace_sm(?MODULE, Params, [], Priority).
-
-
-queue_submit_multi(Params) ->
-    case proplists:get_value(short_message, Params) of
-        Sm when is_list(Sm), length(Sm) > ?SM_MAX_SIZE ->
-            RefNum = smpp_ref_num:next(?MODULE),
-            F = fun(X) -> gen_esme:queue_submit_multi(?MODULE, X, []) end,
-            lists:foreach(F, smpp_sm:split(Params, RefNum, udh));
-        _DoNotFragment ->
-            gen_esme:queue_submit_multi(?MODULE, Params, [])
-    end.
-
-queue_submit_multi(Params, Priority) ->
-    case proplists:get_value(short_message, Params) of
-        Sm when is_list(Sm), length(Sm) > ?SM_MAX_SIZE ->
-            RefNum = smpp_ref_num:next(?MODULE),
-            F = fun(X) ->
-                        gen_esme:queue_submit_multi(?MODULE, X, [], Priority)
-                end,
-            lists:foreach(F, smpp_sm:split(Params, RefNum, udh));
-        _DoNotFragment ->
-            gen_esme:queue_submit_multi(?MODULE, Params, [], Priority)
-    end.
-
-
-queue_submit_sm(Params) ->
-    case proplists:get_value(short_message, Params) of
-        Sm when is_list(Sm), length(Sm) > ?SM_MAX_SIZE ->
-            RefNum = smpp_ref_num:next(?MODULE),
-            F = fun(X) -> gen_esme:queue_submit_sm(?MODULE, X, []) end,
-            lists:foreach(F, smpp_sm:split(Params, RefNum, udh));
-        _DoNotFragment ->
-            gen_esme:queue_submit_sm(?MODULE, Params, [])
-    end.
-
-queue_submit_sm(Params, Priority) ->
-    case proplists:get_value(short_message, Params) of
-        Sm when is_list(Sm), length(Sm) > ?SM_MAX_SIZE ->
-            RefNum = smpp_ref_num:next(?MODULE),
-            F = fun(X) ->
-                        gen_esme:queue_submit_sm(?MODULE, X, [], Priority)
-                end,
-            lists:foreach(F, smpp_sm:split(Params, RefNum, udh));
-        _DoNotFragment ->
-            gen_esme:queue_submit_sm(?MODULE, Params, [], Priority)
-    end.
 
 %%%-----------------------------------------------------------------------------
 %%% LOG EXPORTS
@@ -518,7 +358,6 @@ handle_resp({ok, PduResp}, Ref, #st{bind_req = Ref} = St) ->
     format(St#st.silent, "Bound to ~s~n", [SystemId]),
     Retry = fun({{_, Params}, Args, _}) -> submit(Params, Args, ?HIGH) end,
     lists:foreach(Retry, St#st.reqs),
-    gen_esme:resume(?MODULE),
     {noreply, St#st{bound = true, reqs = []}};
 handle_resp({error, {command_status, Status}}, Ref, #st{bind_req = Ref} = St) ->
     Reason = smpp_error:format(Status),
@@ -637,10 +476,10 @@ submit(Msg, Params, Args, Priority) ->
     submit([{short_message, Msg} | Params], Args, Priority).
 
 
-submit(Params, Args, Priority) ->
+submit(Params, Args, _Priority) ->
     case is_multi(Params) of
         true ->
-            gen_esme:queue_submit_multi(?MODULE, Params, Args, Priority);
+            gen_esme:submit_multi(?MODULE, Params, Args);
         false ->
-            gen_esme:queue_submit_sm(?MODULE, Params, Args, Priority)
+            gen_esme:submit_sm(?MODULE, Params, Args)
     end.

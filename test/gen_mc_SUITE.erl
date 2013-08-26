@@ -166,22 +166,6 @@ outbind(_Conf) ->
     ok.
 
 
-queue_receiver() ->
-    [{userdata, [{doc, "Tests queue MC operations."}]}].
-
-queue_receiver(_Conf) ->
-    {ok, _Mc} = test_mc:start_link(false),
-    {ok, _Esme} = test_esme:start_link(trx, false),
-    wait_bound(),
-    test_mc:resume(),
-    queue_deliver_loop(1, 100),
-    wait(180),
-    test_mc:stop(),
-    timer:sleep(1000),
-    test_esme:stop(),
-    ok.
-
-
 errors() ->
     [{userdata, [{doc, "Test some errors"}]}].
 
