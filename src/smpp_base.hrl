@@ -89,7 +89,8 @@
                 ?RANGE_INTEGER(1, 2#00001101, 2#00001110),
                 ?RANGE_INTEGER(1, 2#11000000, 2#11011111),
                 ?RANGE_INTEGER(1, 2#11110000, 2#11111111),
-                ?CONSTANT(16#10) % flash message
+                ?CONSTANT(16#10), % flash message
+                ?CONSTANT(16#18) % flash message 
                ])).
 -define(ENCODING_SCHEME_RESERVED,
         ?UNION([?RANGE_INTEGER(1, 2#00001011, 2#00001100),
