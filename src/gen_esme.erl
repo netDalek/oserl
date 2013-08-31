@@ -111,23 +111,19 @@ behaviour_info(_Other) ->
 %%% START/STOP EXPORTS
 %%%-----------------------------------------------------------------------------
 start(Module, Args, Opts) ->
-    {EsmeOpts, SrvOpts} = split_options(Opts),
-    gen_server:start(?MODULE, {Module, Args, EsmeOpts}, SrvOpts).
+    gen_server:start(?MODULE, {Module, Args}, Opts).
 
 
 start(SrvName, Module, Args, Opts) ->
-    {EsmeOpts, SrvOpts} = split_options(Opts),
-    gen_server:start(SrvName, ?MODULE, {Module, Args, EsmeOpts}, SrvOpts).
+    gen_server:start(SrvName, ?MODULE, {Module, Args}, Opts).
 
 
 start_link(Module, Args, Opts) ->
-    {EsmeOpts, SrvOpts} = split_options(Opts),
-    gen_server:start_link(?MODULE, {Module, Args, EsmeOpts}, SrvOpts).
+    gen_server:start_link(?MODULE, {Module, Args}, Opts).
 
 
 start_link(SrvName, Module, Args, Opts) ->
-    {EsmeOpts, SrvOpts} = split_options(Opts),
-    gen_server:start_link(SrvName, ?MODULE, {Module, Args, EsmeOpts}, SrvOpts).
+    gen_server:start_link(SrvName, ?MODULE, {Module, Args}, Opts).
 
 %%%-----------------------------------------------------------------------------
 %%% SERVER EXPORTS
@@ -246,7 +242,7 @@ swap_log_handler(SrvRef, Handler1, Handler2) ->
 %%%-----------------------------------------------------------------------------
 %%% INIT/TERMINATE EXPORTS
 %%%-----------------------------------------------------------------------------
-init({Mod, Args, _Opts}) ->
+init({Mod, Args}) ->
     {ok, Log} = smpp_log_mgr:start_link(),
     St = #st{mod = Mod, log = Log},
     pack((St#st.mod):init(Args), St).
@@ -450,15 +446,3 @@ session_closed(St) ->
     end,
     St#st{ref = undefined, session = undefined}.
 
-
-split_options(L) ->
-    split_options(L, [], []).
-
-split_options([], Esme, Srv) ->
-    {Esme, Srv};
-split_options([{rps, _} = H | T], Esme, Srv) ->
-    split_options(T, [H | Esme], Srv);
-split_options([{file_queue, _} = H | T], Esme, Srv) ->
-    split_options(T, [H | Esme], Srv);
-split_options([H | T], Esme, Srv) ->
-    split_options(T, Esme, [H | Srv]).
