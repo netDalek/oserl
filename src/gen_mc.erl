@@ -370,7 +370,7 @@ handle_cast({close, Pid}, St) ->
         _Class:_NotRunning ->
             ok
     end,
-    ok = gen_mc_session:stop(Pid)
+    ok = gen_mc_session:stop(Pid),
     {noreply, St};
 handle_cast({{alert_notification, Params}, Pid}, St) ->
     ok = req_send(Pid, alert_notification, Params),
