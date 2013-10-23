@@ -194,11 +194,7 @@
 -define(SUBMIT_SM_RESP,
         ?PDU([?MESSAGE_ID],
              [],
-             [?ADDITIONAL_STATUS_INFO_TEXT,
-              ?CONGESTION_STATE,
-              ?DELIVERY_FAILURE_REASON,   % data_sm_resp only
-              ?DPF_RESULT,
-              ?NETWORK_ERROR_CODE])).
+             [])).
 
 -define(DATA_SM,
         ?PDU([?SERVICE_TYPE,
