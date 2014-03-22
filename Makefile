@@ -10,6 +10,8 @@ HTMS = $(DOCS:.ndoc=.html)
 TEXS = $(DOCS:.ndoc=.tex)
 PDFS = $(DOCS:.ndoc=.pdf)
 
+REBAR = rebar
+
 ### Dependecy Search Paths
 VPATH = src:include:ebin:doc
 
@@ -22,13 +24,13 @@ VPATH = src:include:ebin:doc
 all: deps compile
 
 compile:
-	./rebar compile
+	@$(REBAR) compile
 
 deps:
-	./rebar get-deps
+	@$(REBAR) get-deps
 
 clean:
-	./rebar clean
+	@$(REBAR) clean
 
 clobber: clean
 	@$(RM) -R doc/html
