@@ -216,6 +216,7 @@ default_addr() ->
 handle_accept(Pid, Sock) ->
     case inet:peername(Sock) of
         {ok, {Addr, _Port}} ->
+            lager:info("sync_send_event accept to Pid:~p Addr:~p", [Pid, Addr]),
             gen_fsm:sync_send_event(Pid, {accept, Sock, Addr});
         {error, _Reason} ->  % Most probably the socket is closed
             false
