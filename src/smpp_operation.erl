@@ -99,6 +99,8 @@ request_failure_code(?COMMAND_ID_QUERY_SM) ->
     ?ESME_RQUERYFAIL;
 request_failure_code(?COMMAND_ID_REPLACE_SM) ->
     ?ESME_RREPLACEFAIL;
+request_failure_code(?COMMAND_ID_DELIVER_SM) ->
+    ?ESME_RDELIVERSMFAIL;
 request_failure_code(_CmdId) ->
     ?ESME_RUNKNOWNERR.
 

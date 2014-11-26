@@ -185,7 +185,9 @@
 -define(ESME_RINVBCASTSRVGRP,     16#00000111). % Broadcast Service Group
                                                 % is invalid
 -define(ESME_RINVBCASTCHANIND,    16#00000112). % Broadcast Channel Indicator
-                                                % is invalid
+                                               % is invalid
+
+-define(ESME_RDELIVERSMFAIL,      16#00000601). % deliver_sm failed
 
 % SMPP 3.4 Error Code Synonyms
 %
