@@ -165,6 +165,7 @@ recv_loop(Pid, Sock, Buffer, Log) ->
     inet:setopts(Sock, [{active, once}]),
     receive
         {tcp, Sock, Input} ->
+            lager:info("recv_loop new tcp packet received data:~p", [Input]),
             L = timer:now_diff(now(), Timestamp),
             B = handle_input(Pid, list_to_binary([Buffer, Input]), L, 1, Log),
             ?MODULE:recv_loop(Pid, Sock, B, Log);
@@ -231,13 +232,16 @@ handle_input(Pid, <<CmdLen:32, Rest/binary>> = Buffer, Lapse, N, Log) ->
             BinPdu = <<CmdLen:32, PduRest/binary>>,
             case catch smpp_operation:unpack(BinPdu) of
                 {ok, Pdu} ->
+                    lager:info("handle_input new pdu received:~p", [Pdu]),
                     smpp_log_mgr:pdu(Log, BinPdu),
                     CmdId = smpp_operation:get_value(command_id, Pdu),
                     Event = {input, CmdId, Pdu, (Lapse div N), Now},
                     gen_fsm:send_all_state_event(Pid, Event);
                 {error, _CmdId, _Status, _SeqNum} = Event ->
+                    lager:info("handle_input pdu error bin_pdu:~p", [BinPdu]),
                     gen_fsm:send_all_state_event(Pid, Event);
                 {'EXIT', _What} ->
+                    lager:info("handle_input pdu error bin_pdu:~p", [BinPdu]),
                     Event = {error, 0, ?ESME_RUNKNOWNERR, 0},
                     gen_fsm:send_all_state_event(Pid, Event)
             end,
