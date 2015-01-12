@@ -90,7 +90,8 @@
          session_init_timer,
          enquire_link_timer,
          inactivity_timer,
-         enquire_link_resp_timer}).
+         enquire_link_resp_timer,
+         enquire_link_in_progress = false}).
 
 %%%-----------------------------------------------------------------------------
 %%% BEHAVIOUR EXPORTS
@@ -222,8 +223,8 @@ bound_rx({CmdId, _Pdu} = R, St)
     {next_state, bound_rx, St};
 bound_rx({timeout, _Ref, Timer}, St) ->
     case handle_timeout(Timer, St) of
-        ok ->
-            {next_state, bound_rx, St};
+        {ok, NewSt} ->
+            {next_state, bound_rx, NewSt};
         {error, Reason} ->
             {stop, Reason, St}
     end;
@@ -260,8 +261,8 @@ bound_tx({CmdId, _Pdu} = R, St)
     {next_state, bound_tx, St};
 bound_tx({timeout, _Ref, Timer}, St) ->
     case handle_timeout(Timer, St) of
-        ok ->
-            {next_state, bound_tx, St};
+        {ok, NewSt} ->
+            {next_state, bound_tx, NewSt};
         {error, Reason} ->
             {stop, Reason, St}
     end;
@@ -298,8 +299,8 @@ bound_trx({CmdId, _Pdu} = R, St)
     {next_state, bound_trx, St};
 bound_trx({timeout, _Ref, Timer}, St) ->
     case handle_timeout(Timer, St) of
-        ok ->
-            {next_state, bound_trx, St};
+        {ok, NewSt} ->
+            {next_state, bound_trx, NewSt};
         {error, Reason} ->
             {stop, Reason, St}
     end;
@@ -340,8 +341,8 @@ open({CmdId, _Pdu} = R, St)
     end;
 open({timeout, _Ref, Timer}, St) ->
     case handle_timeout(Timer, St) of
-        ok ->
-            {next_state, open, St};
+        {ok, NewSt} ->
+            {next_state, open, NewSt};
         {error, Reason} ->
             {stop, Reason, St}
     end;
@@ -365,8 +366,8 @@ outbound({CmdId, _Pdu} = R, St)
     end;
 outbound({timeout, _Ref, Timer}, St) ->
     case handle_timeout(Timer, St) of
-        ok ->
-            {next_state, outbound, St};
+        {ok, NewSt} ->
+            {next_state, outbound, NewSt};
         {error, Reason} ->
             {stop, Reason, St}
     end;
@@ -377,8 +378,8 @@ outbound(R, St) ->
 
 unbound({timeout, _Ref, Timer}, St) ->
     case handle_timeout(Timer, St) of
-        ok ->
-            {next_state, unbound, St};
+        {ok, NewSt} ->
+            {next_state, unbound, NewSt};
         {error, Reason} ->
             {stop, Reason, St}
     end;
@@ -637,9 +638,10 @@ handle_timeout({response_timer, SeqNum}, St) ->
     {ok, {SeqNum, CmdId, _, Ref}} = smpp_req_tab:read(St#st.req_tab, SeqNum),
     Status = smpp_operation:request_failure_code(CmdId),
     handle_peer_resp({error, Status}, Ref, St),
-    ok;
-handle_timeout(enquire_link_timer, _St) ->
-    ok = gen_fsm:send_all_state_event(self(), ?COMMAND_ID_ENQUIRE_LINK);
+    {ok, St};
+handle_timeout(enquire_link_timer, St) ->
+    ok = gen_fsm:send_all_state_event(self(), ?COMMAND_ID_ENQUIRE_LINK),
+    {ok, St#st{enquire_link_in_progress = true}};
 handle_timeout(enquire_link_failure, _St) ->
     {error, {timeout, enquire_link}};
 handle_timeout(session_init_timer, _St) ->
@@ -650,6 +652,9 @@ handle_timeout(inactivity_timer, _St) ->
 %%%-----------------------------------------------------------------------------
 %%% SEND PDU FUNCTIONS
 %%%-----------------------------------------------------------------------------
+
+send_enquire_link(#st{enquire_link_in_progress = false} = St) ->
+    St;
 send_enquire_link(St) ->
     SeqNum = ?INCR_SEQUENCE_NUMBER(St#st.sequence_number),
     Pdu = smpp_operation:new(?COMMAND_ID_ENQUIRE_LINK, SeqNum, []),
@@ -659,20 +664,19 @@ send_enquire_link(St) ->
     St#st{sequence_number = SeqNum,
           enquire_link_timer = ETimer,
           enquire_link_resp_timer = RTimer,
-          congestion_state = 0}.
-
+          congestion_state = 0,
+          enquire_link_in_progress = false}.
 
 send_request(CmdId, Params, From, St)
   when CmdId == ?COMMAND_ID_ALERT_NOTIFICATION;
        CmdId == ?COMMAND_ID_OUTBIND ->
     smpp_session:cancel_timer(St#st.inactivity_timer),
-    smpp_session:cancel_timer(St#st.enquire_link_timer),
     SeqNum = ?INCR_SEQUENCE_NUMBER(St#st.sequence_number),
     Pdu = smpp_operation:new(CmdId, SeqNum, Params),
     ok = smpp_session:send_pdu(St#st.sock, Pdu, St#st.log),
     gen_fsm:reply(From, ok),
-    St#st{sequence_number = SeqNum,
-          enquire_link_timer = smpp_session:start_timer(St#st.timers, enquire_link_timer),
+    NewSt = start_enquire_link_timer(St),
+    NewSt#st{sequence_number = SeqNum,
           inactivity_timer = smpp_session:start_timer(St#st.timers, inactivity_timer)};
 
 
@@ -682,13 +686,12 @@ send_request(CmdId, Params, Ref, St) ->
     case smpp_operation:pack(Pdu) of
         {ok, BinPdu} ->
             smpp_session:cancel_timer(St#st.inactivity_timer),
-            smpp_session:cancel_timer(St#st.enquire_link_timer),
             ok = smpp_session:send_pdu(St#st.sock, BinPdu, St#st.log),
             RTimer = smpp_session:start_timer(St#st.timers, {response_timer, SeqNum}),
             ok = smpp_req_tab:write(St#st.req_tab, {SeqNum, CmdId, RTimer, Ref}),
-            St#st{sequence_number = SeqNum,
-                  enquire_link_timer = smpp_session:start_timer(St#st.timers, enquire_link_timer),
-                  inactivity_timer = smpp_session:start_timer(St#st.timers, inactivity_timer)};
+            NewSt = start_enquire_link_timer(St),
+            NewSt#st{sequence_number = SeqNum,
+                     inactivity_timer = smpp_session:start_timer(St#st.timers, inactivity_timer)};
         {error, _CmdId, Status, _SeqNum} ->
             handle_peer_resp({error, {command_status, Status}}, Ref, St),
             St
@@ -698,3 +701,11 @@ send_request(CmdId, Params, Ref, St) ->
 send_response(CmdId, Status, SeqNum, Params, Sock, Log) ->
     Pdu = smpp_operation:new(CmdId, Status, SeqNum, Params),
     smpp_session:send_pdu(Sock, Pdu, Log).
+
+
+start_enquire_link_timer(St) ->
+    smpp_session:cancel_timer(St#st.enquire_link_timer),
+    St#st{
+        enquire_link_in_progress = false,
+        enquire_link_timer = smpp_session:start_timer(St#st.timers, enquire_link_timer)
+    }.
