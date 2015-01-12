@@ -597,6 +597,7 @@ session_new(Pid, Opts) ->
     Ref = erlang:monitor(process, Pid),
     unlink(Pid),
     case proplists:get_value(rps, Opts) of
+        undefined -> nop;
         false -> nop;
         _ -> start_cl_queue_srv(Pid, Opts)
     end,
