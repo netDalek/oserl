@@ -309,6 +309,7 @@ bound_trx(R, St) ->
 
 
 listen({accept, Sock, Addr}, _From, St) ->
+    lager:info("accepting connection, calling handle_accept of gen_mc ~p", [St#st.mc]),
     case (St#st.mod):handle_accept(St#st.mc, Addr) of
         ok ->
             cancel_timer(St#st.session_init_timer),

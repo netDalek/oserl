@@ -351,8 +351,10 @@ handle_call({{handle_unbind, Pdu}, Pid}, From, St) ->
     pack((St#st.mod):handle_unbind(Pid, Pdu, From, St#st.mod_st), St);
 handle_call({{handle_accept, Addr}, Pid}, From, #st{listener = Pid} = St) ->
     Opts = [{lsock, St#st.lsock}, {log, St#st.log}, {timers, St#st.timers}],
+    lager:info("handle_call handle_accept, creating new session with opts ~p", [Opts]),
     {ok, Listener} = gen_mc_session:start_link(?MODULE, Opts),
     NewSt = St#st{listener = Listener},
+    lager:info("handle_call handle_accept, calling handle_accept on ~p", [NewSt#st.mod]),
     pack((NewSt#st.mod):handle_accept(Pid, Addr, From, NewSt#st.mod_st), NewSt);
 handle_call({{Fun, Pdu}, Pid}, From, St) ->
     pack((St#st.mod):Fun(Pid, Pdu, From, St#st.mod_st), St);
@@ -426,12 +428,15 @@ code_change(OldVsn, St, Extra) ->
 %%%-----------------------------------------------------------------------------
 handle_accept(SrvRef, Addr) ->
     Self = self(),
+    lager:info("accepting connection, sending handle_accept:~p to gen_mc ~p (~p)", [{{handle_accept, Addr}, Self}, SrvRef, erlang:process_info(SrvRef, message_queue_len)]),
     case gen_server:call(SrvRef, {{handle_accept, Addr}, Self}, ?ASSERT_TIME) of
         {ok, Opts} ->
             Reply = {accepted, Opts},
+            lager:info("accepted, calling ~p on ~p (~p)", [{Reply, Self}, SrvRef, erlang:process_info(SrvRef, message_queue_len)]),
             ok = gen_server:call(SrvRef, {Reply, Self}, ?ASSERT_TIME);
         Error ->
             Reply = {rejected, Error},
+            lager:info("rejected, calling ~p on ~p (~p)", [{Reply, Self}, SrvRef, erlang:process_info(SrvRef, message_queue_len)]),
             ok = gen_server:call(SrvRef, {Reply, Self}, ?ASSERT_TIME),
             Error
     end.
