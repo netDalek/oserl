@@ -605,6 +605,7 @@ handle_peer_bind({CmdId, Pdu}, St) ->
 
 
 handle_peer_operation({CmdId, Pdu}, St) ->
+    lager:info("handle_peer_operation by gen_mc_session ~p, sequence_number: ~p", [self(), smpp_operation:get_value(sequence_number,Pdu)]),
     CmdName = ?COMMAND_NAME(CmdId),
     SeqNum = smpp_operation:get_value(sequence_number, Pdu),
     RespId = ?RESPONSE(CmdId),
