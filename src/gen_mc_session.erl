@@ -441,6 +441,7 @@ handle_event({input, CmdId, Pdu, _Lapse, _Timestamp}, Stn, Std)
   when ?IS_RESPONSE(CmdId) ->
     cancel_timer(Std#st.enquire_link_resp_timer),  % In case it was set
     SeqNum = smpp_operation:get_value(sequence_number, Pdu),
+    lager:info("handle response in gen_mc_session ~p, sequence_number: ~p", [self(), SeqNum]),
     ReqId = ?REQUEST(CmdId),
     case smpp_req_tab:read(Std#st.req_tab, SeqNum) of
         {ok, {SeqNum, ReqId, RTimer, Ref}} ->
