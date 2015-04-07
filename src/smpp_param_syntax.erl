@@ -61,6 +61,8 @@ encode(Value, ParamType) when is_record(ParamType, standard) ->
     encode_std(Value, ParamType);
 encode(Value, ParamType) when is_record(ParamType, tlv) ->
     encode_tlv(Value, ParamType);
+encode(Value, ParamType) when is_binary(Value) and is_integer(ParamType) ->
+    {ok, [<<ParamType:16/integer, (size(Value)):16/integer>>, Value]};
 encode(_Value, _ParamType) ->
     {error, ?ESME_RUNKNOWNERR}.
 

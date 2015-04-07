@@ -114,8 +114,13 @@ pack_body(Body, P) ->
             case pack_tlvs(BodyTlvs, P#pdu.tlv_types) of
                 {ok, Tlvs, BodyOpts} ->
                     case pack_opts(BodyOpts, P#pdu.opt_types) of
-                        {ok, Opts} ->
-                            {ok, [Stds, Tlvs, Opts]};
+                        {ok, Opts, UnknownTlvs} ->
+                            case pack_unknown(UnknownTlvs) of
+                                {ok, Unknown} ->
+                                    {ok, [Stds, Tlvs, Opts, Unknown]};
+                                UnknownError ->
+                                    UnknownError
+                            end;
                         OptError ->
                             OptError
                     end;
@@ -160,8 +165,8 @@ pack_tlvs(Body, [Type | Types], Acc) ->
 pack_opts(Body, OptTypes) ->
     pack_opts(Body, OptTypes, []).
 
-pack_opts(_Body, [], Acc) ->
-    {ok, Acc};
+pack_opts(Body, [], Acc) ->
+    {ok, Acc, Body};
 pack_opts(Body, [Type | Types], Acc) ->
     {Value, NewBody} = get_value(smpp_param_syntax:get_name(Type), Body),
     case smpp_param_syntax:encode(Value, Type) of
@@ -173,6 +178,21 @@ pack_opts(Body, [Type | Types], Acc) ->
             Error
     end.
 
+pack_unknown(Body) ->
+    pack_unknown(Body, []).
+
+pack_unknown([], Acc) ->
+    {ok, Acc};
+pack_unknown([{Type, Value} | NewBody], Acc) when is_integer(Type) and is_binary(Value) ->
+    case smpp_param_syntax:encode(Value, Type) of
+        {ok, BinValue} ->
+            pack_unknown(NewBody, [BinValue | Acc]);
+        Error ->
+            Error
+    end;
+pack_unknown([{Type, Value} | NewBody], Acc) ->
+    lager:info("non-integer type or non-binary value (type = ~p, value = ~p), just skip it~n", [Type, Value]),
+    pack_unknown(NewBody, Acc).
 
 unpack_body(BinBody, P) ->
     case unpack_stds(BinBody, P#pdu.std_types) of
@@ -180,8 +200,13 @@ unpack_body(BinBody, P) ->
             case unpack_tlvs(BinTlvs, P#pdu.tlv_types) of
                 {ok, TlvValues, BinOpts} ->
                     case unpack_opts(BinOpts, P#pdu.opt_types) of
-                        {ok, OptValues} ->
-                            {ok, StdValues ++ TlvValues ++ OptValues};
+                        {ok, OptValues, BinUnknown} ->
+                            case unpack_unknown(BinUnknown) of
+                                {ok, UnknownValues} ->
+                                    {ok, StdValues ++ TlvValues ++ OptValues ++ UnknownValues};
+                                UnknownError ->
+                                    UnknownError
+                            end;
                         OptError ->
                             OptError
                     end;
@@ -223,36 +248,13 @@ unpack_tlvs(BinTlvs, [Type | Types], Acc) ->
     end.
 
 
-unpack_opts(BinOpts, []) ->
-    case smpp_param_syntax:chop_tlv(BinOpts) of
-        {ok, _Tlv, RestUnusedOpts} ->
-            % Remaining octets seem to be a collection of unsupported TLVs.
-            % Following compatibility guidelines recommend to silently discard
-            % unsupported TLVs (if they are well-formed).
-            %
-            % After the first TLV was chopped, we call unpack_tlvs/3 cause, in
-            % case of an error, we rather return the ?ESME_RINVTLVSTREAM error
-            % instead of the ?ESME_RINVCMDLEN value returned by this function.
-            unpack_opts(RestUnusedOpts, [], []);
-        {error, <<>>} ->
-            {ok, []};
-        _Error ->
-            % Guess that no unsupported TLVs were appended to the body,
-            % just dealing with a malformed PDU.
-            {error, ?ESME_RINVCMDLEN}
-    end;
 unpack_opts(BinOpts, OptTypes) ->
     unpack_opts(BinOpts, OptTypes, []).
 
 unpack_opts(<<>>, _OptTypes, Acc) ->
-    {ok, Acc};
+    {ok, Acc, <<>>};
 unpack_opts(UnusedOpts, [], Acc) ->
-    case smpp_param_syntax:chop_tlv(UnusedOpts) of
-        {ok, _Tlv, RestUnusedOpts} ->
-            unpack_opts(RestUnusedOpts, [], Acc);
-        _Error ->  % Malformed TLV
-            {error, ?ESME_RINVTLVSTREAM}
-    end;
+    {ok, Acc, UnusedOpts};
 unpack_opts(BinOpts, [Type | Types], Acc) ->
     case smpp_param_syntax:decode(BinOpts, Type) of
         {ok, Value, RestBinOpts} ->
@@ -264,3 +266,15 @@ unpack_opts(BinOpts, [Type | Types], Acc) ->
             Error
     end.
 
+unpack_unknown(BinOpts) ->
+    unpack_unknown(BinOpts, []).
+
+unpack_unknown(<<>>, Acc) ->
+    {ok, Acc};
+unpack_unknown(BinOpts, Acc) ->
+    case smpp_param_syntax:chop_tlv(BinOpts) of
+        {ok, <<Tag:16, _Len:16, Val/binary>>, RestOpts} ->
+            unpack_unknown(RestOpts, [{Tag, Val}|Acc]);
+        _Error ->  % Malformed TLV
+            {error, ?ESME_RINVTLVSTREAM}
+    end.
