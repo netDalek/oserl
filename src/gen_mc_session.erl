@@ -309,7 +309,7 @@ bound_trx(R, St) ->
 
 
 listen({accept, Sock, Addr}, _From, St) ->
-    lager:info("accepting connection, calling handle_accept of gen_mc ~p", [St#st.mc]),
+    lager:debug("accepting connection, calling handle_accept of gen_mc ~p", [St#st.mc]),
     case (St#st.mod):handle_accept(St#st.mc, Addr) of
         ok ->
             cancel_timer(St#st.session_init_timer),
@@ -441,7 +441,7 @@ handle_event({input, CmdId, Pdu, _Lapse, _Timestamp}, Stn, Std)
   when ?IS_RESPONSE(CmdId) ->
     cancel_timer(Std#st.enquire_link_resp_timer),  % In case it was set
     SeqNum = smpp_operation:get_value(sequence_number, Pdu),
-    lager:info("handle response in gen_mc_session ~p, sequence_number: ~p", [self(), SeqNum]),
+    lager:debug("handle response in gen_mc_session ~p, sequence_number: ~p", [self(), SeqNum]),
     ReqId = ?REQUEST(CmdId),
     case smpp_req_tab:read(Std#st.req_tab, SeqNum) of
         {ok, {SeqNum, ReqId, RTimer, Ref}} ->
@@ -606,7 +606,7 @@ handle_peer_bind({CmdId, Pdu}, St) ->
 
 
 handle_peer_operation({CmdId, Pdu}, St) ->
-    lager:info("handle_peer_operation by gen_mc_session ~p, sequence_number: ~p", [self(), smpp_operation:get_value(sequence_number,Pdu)]),
+    lager:debug("handle_peer_operation by gen_mc_session ~p, sequence_number: ~p", [self(), smpp_operation:get_value(sequence_number,Pdu)]),
     CmdName = ?COMMAND_NAME(CmdId),
     SeqNum = smpp_operation:get_value(sequence_number, Pdu),
     RespId = ?RESPONSE(CmdId),

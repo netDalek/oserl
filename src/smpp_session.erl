@@ -216,7 +216,7 @@ default_addr() ->
 handle_accept(Pid, Sock) ->
     case inet:peername(Sock) of
         {ok, {Addr, _Port}} ->
-            lager:info("sync_send_event accept to pid:~p Addr:~p", [Pid, Addr]),
+            lager:debug("sync_send_event accept to pid:~p Addr:~p", [Pid, Addr]),
             gen_fsm:sync_send_event(Pid, {accept, Sock, Addr});
         {error, _Reason} ->  % Most probably the socket is closed
             false
@@ -234,7 +234,7 @@ handle_input(Pid, <<CmdLen:32, Rest/binary>> = Buffer, Lapse, N, Log) ->
                     smpp_log_mgr:pdu(Log, BinPdu),
                     CmdId = smpp_operation:get_value(command_id, Pdu),
                     Event = {input, CmdId, Pdu, (Lapse div N), Now},
-                    lager:info("sending pdu to session ~p, sequence_number ~p", [Pid, smpp_operation:get_value(sequence_number,Pdu)]),
+                    lager:debug("sending pdu to session ~p, sequence_number ~p", [Pid, smpp_operation:get_value(sequence_number,Pdu)]),
                     gen_fsm:send_all_state_event(Pid, Event);
                 {error, _CmdId, _Status, _SeqNum} = Event ->
                     gen_fsm:send_all_state_event(Pid, Event);
