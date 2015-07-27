@@ -218,7 +218,7 @@
 -define(INTERFACE_VERSION,
         ?STANDARD(interface_version,
                   ?INTERFACE_VERSION_DOMAIN,
-                  ?SMPP_VERSION_5_0,
+                  ?SMPP_VERSION_3_4,
                   undefined)).
 
 %% message_id
