@@ -123,9 +123,9 @@ end_traces(Case) ->
 performance() ->
     [{userdata, [{doc, "Test performace restrictions."}]}].
 
-performance(Conf) ->
-    MaxTime = ?config(max_time, Conf),
-    MaxOperations = ?config(max_operations, Conf),
+performance(_Conf) ->
+    MaxTime = ct:get_config(max_time),
+    MaxOperations = ct:get_config(max_operations),
     {SrcAddr, ShortMsg} = hd(ct:get_config(deliver_sm)),
     Args = [SrcAddr, ShortMsg, MaxOperations],
     {T, _} = timer:tc(?MODULE, performance_test, Args),
