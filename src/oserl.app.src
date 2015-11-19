@@ -1,6 +1,6 @@
 {application, oserl, [
     {description, "Open SMPP Erlang Library"},
-    {vsn, "3.2.4"},
+    {vsn, "4.0.0"},
     {modules, []},
     {registered, []},
     {applications, [kernel, stdlib, common_lib]},
