@@ -199,7 +199,8 @@ init_listen(Mod, Mc, LSock, Tmr, Log) ->
                      timers = Tmr}}.
 
 
-terminate(_Reason, _Stn, Std) ->
+terminate(Reason, _Stn, Std) ->
+    lager:error("gen_mc_session terminated with reason ~p", [Reason]),
     exit(Std#st.sock_ctrl, kill),
     if Std#st.sock == undefined -> ok; true -> gen_tcp:close(Std#st.sock) end.
 
@@ -512,6 +513,7 @@ handle_event({sock_error, _Reason}, unbound, Std) ->
     {stop, normal, Std#st{sock = undefined}};
 handle_event({sock_error, Reason}, _Stn, Std) ->
     gen_tcp:close(Std#st.sock),
+    lager:info("session ~p closed by socket error ~p", [Std#st.mc, Reason]), 
     (Std#st.mod):handle_closed(Std#st.mc, Reason),
     {stop, normal, Std#st{sock = undefined}};
 handle_event({listen_error, Reason}, _Stn, Std) ->
