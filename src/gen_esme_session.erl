@@ -232,7 +232,7 @@ init_listen(Mod, Esme, LSock, Tmr, Log) ->
 
 
 terminate(Reason, _Stn, Std) ->
-    lager:error("gen_esme_session terminated with reason ~p", [Reason]),
+    lager:notice("gen_esme_session terminated with reason ~p", [Reason]),
     exit(Std#st.sock_ctrl, kill),
     if Std#st.sock == undefined -> ok; true -> gen_tcp:close(Std#st.sock) end.
 
