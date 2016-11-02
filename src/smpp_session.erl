@@ -133,6 +133,7 @@ send_pdu(Sock, BinPdu, Log) when is_list(BinPdu) ->
 
 
 send_pdu(Sock, Pdu, Log) ->
+    lager:info("smpp_operation:pack(~p)", [Pdu]),
     case smpp_operation:pack(Pdu) of
         {ok, BinPdu} ->
             send_pdu(Sock, BinPdu, Log);
