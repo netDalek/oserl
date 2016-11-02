@@ -134,12 +134,18 @@ send_pdu(Sock, BinPdu, Log) when is_list(BinPdu) ->
 
 send_pdu(Sock, Pdu, Log) ->
     lager:info("smpp_operation:pack(~p)", [Pdu]),
-    case smpp_operation:pack(Pdu) of
+
+    try smpp_operation:pack(Pdu) of
         {ok, BinPdu} ->
             send_pdu(Sock, BinPdu, Log);
         {error, _CmdId, Status, _SeqNum} ->
             gen_tcp:close(Sock),
             exit({command_status, Status})
+    catch
+        C:R ->
+            StackTrace = erlang:get_stacktrace(),
+            lager:error("smpp_operation:pack(~p) error ~p:~p ~p", [Pdu, C, R, StackTrace]),
+            erlang:raise(C, R, StackTrace)
     end.
 
 %%%-----------------------------------------------------------------------------

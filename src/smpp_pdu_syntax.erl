@@ -76,6 +76,8 @@ pack({CmdId, 0, SeqNum, Body}, PduType) ->
         {error, Status} ->
             {error, CmdId, Status, SeqNum}
     end;
+pack({CmdId, {command_status, Status}, SeqNum, _Body}, _PduType) ->
+    pack({CmdId, Status, SeqNum, _Body}, _PduType);
 pack({CmdId, Status, SeqNum, _Body}, _PduType) ->
     {ok, [<<16:32, CmdId:32, Status:32, SeqNum:32>>]}.
 
