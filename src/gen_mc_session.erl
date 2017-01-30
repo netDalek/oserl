@@ -540,9 +540,7 @@ handle_sync_event({reply, {SeqNum, Reply}}, _From, Stn, Std) ->
     Sock = Std#st.sock,
     Log = Std#st.log,
     case Reply of
-        {ok, PList1} ->
-            PList2  = [{congestion_state, Std#st.congestion_state}],
-            Params = smpp_operation:merge(PList1, PList2),
+        {ok, Params} ->
             send_response(RespId, ?ESME_ROK, SeqNum, Params, Sock, Log);
         {error, Error} ->
             send_response(RespId, Error, SeqNum, [], Sock, Log)
@@ -616,9 +614,7 @@ handle_peer_operation({CmdId, Pdu}, St) ->
         noreply ->
             ok = smpp_req_tab:write(St#st.op_tab, {SeqNum, CmdId}),
             true;
-        {ok, PList1} ->
-            PList2  = [{congestion_state, St#st.congestion_state}],
-            Params = smpp_operation:merge(PList1, PList2),
+        {ok, Params} ->
             send_response(RespId, ?ESME_ROK, SeqNum, Params, Sock, Log),
             true;
         {error, Error} ->
@@ -722,4 +718,3 @@ start_timer(Timers, Ref) ->
 
 cancel_timer(Ref) ->
     smpp_session:cancel_timer(Ref).
-
