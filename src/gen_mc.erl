@@ -405,6 +405,7 @@ handle_cast({{rps_max, Rps}, Pid}, St) ->
     L = session_update(Sss#session{rps = Rps}, St#st.sessions),
     {noreply, St#st{sessions = L}};
 handle_cast({{handle_closed, Reason}, Pid}, St) ->
+    lager:info("session ~p was closed with reason ~p", [Pid, Reason]),
     NewSt = session_closed(Pid, St),
     pack((NewSt#st.mod):handle_closed(Pid, Reason, NewSt#st.mod_st), NewSt);
 handle_cast({{handle_resp, Resp, Ref}, Pid}, St) ->
@@ -412,6 +413,7 @@ handle_cast({{handle_resp, Resp, Ref}, Pid}, St) ->
 
 
 handle_info({'DOWN', _Ref, _Type, Pid, Reason}, St) ->
+    lager:info("session ~p is DOWN with reason ~p", [Pid, Reason]),
     NewSt = session_closed(Pid, St),
     pack((NewSt#st.mod):handle_closed(Pid, Reason, NewSt#st.mod_st), NewSt);
 handle_info(Info, St) ->
