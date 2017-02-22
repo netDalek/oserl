@@ -199,7 +199,8 @@ init_listen(Mod, Mc, LSock, Tmr, Log) ->
                      timers = Tmr}}.
 
 
-terminate(_Reason, _Stn, Std) ->
+terminate(Reason, _Stn, Std) ->
+    lager:notice("gen_mc_session terminated with reason ~p", [Reason]),
     exit(Std#st.sock_ctrl, kill),
     if Std#st.sock == undefined -> ok; true -> gen_tcp:close(Std#st.sock) end.
 
@@ -512,6 +513,7 @@ handle_event({sock_error, _Reason}, unbound, Std) ->
     {stop, normal, Std#st{sock = undefined}};
 handle_event({sock_error, Reason}, _Stn, Std) ->
     gen_tcp:close(Std#st.sock),
+    lager:info("session ~p closed by socket error ~p", [Std#st.mc, Reason]), 
     (Std#st.mod):handle_closed(Std#st.mc, Reason),
     {stop, normal, Std#st{sock = undefined}};
 handle_event({listen_error, Reason}, _Stn, Std) ->
@@ -535,17 +537,22 @@ handle_info(_Info, Stn, Std) ->
 handle_sync_event({stop, Reason}, _From, _Stn, Std) ->
     {stop, Reason, ok, Std};
 handle_sync_event({reply, {SeqNum, Reply}}, _From, Stn, Std) ->
-    {ok, {SeqNum, CmdId}} = smpp_req_tab:read(Std#st.op_tab, SeqNum),
-    RespId = ?RESPONSE(CmdId),
-    Sock = Std#st.sock,
-    Log = Std#st.log,
-    case Reply of
-        {ok, PList1} ->
-            PList2  = [{congestion_state, Std#st.congestion_state}],
-            Params = smpp_operation:merge(PList1, PList2),
-            send_response(RespId, ?ESME_ROK, SeqNum, Params, Sock, Log);
-        {error, Error} ->
-            send_response(RespId, Error, SeqNum, [], Sock, Log)
+    case smpp_req_tab:read(Std#st.op_tab, SeqNum) of
+        {ok, {SeqNum, CmdId}} ->
+            RespId = ?RESPONSE(CmdId),
+            Sock = Std#st.sock,
+            Log = Std#st.log,
+            case Reply of
+                {ok, PList1} ->
+                    PList2  = [{congestion_state, Std#st.congestion_state}],
+                    Params = smpp_operation:merge(PList1, PList2),
+                    send_response(RespId, ?ESME_ROK, SeqNum, Params, Sock, Log);
+                {error, Error} ->
+                    send_response(RespId, Error, SeqNum, [], Sock, Log)
+            end;
+        {error, not_found} ->
+            lager:notice("Do not send anything, reply ~p might already been sent", [SeqNum]),
+            true
     end,
     {reply, ok, Stn, Std};
 handle_sync_event({?COMMAND_ID_OUTBIND, Params}, From, open, Std) ->
