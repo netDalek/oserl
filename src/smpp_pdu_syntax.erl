@@ -78,8 +78,6 @@ pack({CmdId, 0, SeqNum, Body}, PduType) ->
     end;
 pack({CmdId, {command_status, Status}, SeqNum, _Body}, _PduType) ->
     pack({CmdId, Status, SeqNum, _Body}, _PduType);
-pack({CmdId, Status, SeqNum, _Body}, _PduType) when CmdId == ?COMMAND_ID_DELIVER_SM_RESP ->
-    {ok, [<<16:32, CmdId:32, Status:32, SeqNum:32, 0:8>>]};
 pack({CmdId, Status, SeqNum, _Body}, _PduType) ->
     {ok, [<<16:32, CmdId:32, Status:32, SeqNum:32>>]}.
 
