@@ -2,10 +2,10 @@
     {description, "Open SMPP Erlang Library"},
     {vsn, "3.2.4"},
     {modules, [
-        gen_esme,
         gen_esme_session,
-        gen_mc,
+        gen_esme,
         gen_mc_session,
+        gen_mc,
         smpp_base,
         smpp_base_syntax,
         smpp_disk_log_hlr,
