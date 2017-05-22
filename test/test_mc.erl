@@ -201,8 +201,7 @@ success() ->
 %%% INIT/TERMINATE EXPORTS
 %%%-----------------------------------------------------------------------------
 init([Silent]) ->
-    {A1, A2, A3} = now(),
-    random:seed(A1, A2, A3),
+    rand:seed(exsplus, erlang:timestamp()),
     {ok, #st{silent = Silent}}.
 
 
@@ -244,7 +243,7 @@ code_change(_OldVsn, St, _Extra) ->
 %%%-----------------------------------------------------------------------------
 handle_accept(_Pid, Addr, _From, St) ->
     Ip = format_ip(Addr),
-    case random:uniform(100) of
+    case rand:uniform(100) of
         N when N < 25 ->
             format(St#st.silent, "~nConnection from ~s refused~n", [Ip]),
             {reply, {error, refused}, St};
@@ -402,7 +401,7 @@ bind_resp(Pid, Pdu, St) ->
 
 
 random_bind_status() ->
-    case random:uniform(100) of
+    case rand:uniform(100) of
         N when N =< 25 ->
             ?ESME_RBINDFAIL;
         _N ->
@@ -411,7 +410,7 @@ random_bind_status() ->
 
 
 random_submit_status() ->
-    case random:uniform(100) of
+    case rand:uniform(100) of
         N when N =< 10 ->
             ?ESME_RSYSERR;
         N when N =< 20 ->
