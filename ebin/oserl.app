@@ -1,11 +1,12 @@
 {application, oserl, [
     {description, "Open SMPP Erlang Library"},
-    {vsn, "3.2.4"},
+    {vsn, "3.2.5"},
     {modules, [
         gen_esme_session,
         gen_esme,
         gen_mc_session,
         gen_mc,
+        proxy_protocol,
         smpp_base,
         smpp_base_syntax,
         smpp_disk_log_hlr,
