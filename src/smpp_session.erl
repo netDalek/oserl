@@ -250,6 +250,7 @@ handle_input(Pid, <<CmdLen:32, Rest/binary>> = Buffer, Lapse, N, Log) ->
                     lager:debug("sending pdu to session ~p, sequence_number ~p", [Pid, smpp_operation:get_value(sequence_number,Pdu)]),
                     gen_fsm:send_all_state_event(Pid, Event);
                 {error, _CmdId, _Status, _SeqNum} = Event ->
+                    lager:debug("error unpacking smpp operation in session ~p, ~p", [Pid, Event]),
                     gen_fsm:send_all_state_event(Pid, Event);
                 {'EXIT', _What} ->
                     Event = {error, 0, ?ESME_RUNKNOWNERR, 0},
