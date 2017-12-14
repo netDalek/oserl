@@ -549,12 +549,12 @@ handle_sync_event({reply, {SeqNum, Reply}}, _From, Stn, Std) ->
                     send_response(RespId, ?ESME_ROK, SeqNum, Params, Sock, Log);
                 {error, Error} ->
                     send_response(RespId, Error, SeqNum, [], Sock, Log)
-            end;
+            end,
+            {reply, ok, Stn, Std};
         {error, not_found} ->
             lager:notice("Do not send anything, reply ~p might already been sent", [SeqNum]),
-            true
-    end,
-    {reply, ok, Stn, Std};
+            {reply, {error, not_found}, Stn, Std}
+    end;
 handle_sync_event({?COMMAND_ID_OUTBIND, Params}, From, open, Std) ->
     NewStd = send_request(?COMMAND_ID_OUTBIND, Params, From, Std),
     {next_state, outbound, NewStd};
