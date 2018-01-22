@@ -90,7 +90,8 @@
          session_init_timer,
          enquire_link_timer,
          inactivity_timer,
-         enquire_link_resp_timer}).
+         enquire_link_resp_timer,
+         proxy_ip_list = []}).
 
 %%%-----------------------------------------------------------------------------
 %%% BEHAVIOUR EXPORTS
@@ -161,12 +162,13 @@ outbind(FsmRef, Params) ->
 init([Mod, Mc, Opts]) ->
     _Ref = erlang:monitor(process, Mc),
     Timers = proplists:get_value(timers, Opts, ?DEFAULT_TIMERS_SMPP),
+    ProxyIpList= proplists:get_value(proxy_ip_list, Opts, false),
     Log = proplists:get_value(log, Opts),
     case proplists:get_value(lsock, Opts) of
         undefined ->
             init_open(Mod, Mc, proplists:get_value(sock, Opts), Timers, Log);
         LSock ->
-            init_listen(Mod, Mc, LSock, Timers, Log)
+            init_listen(Mod, Mc, LSock, Timers, Log, ProxyIpList)
     end.
 
 
@@ -187,16 +189,17 @@ init_open(Mod, Mc, Sock, Tmr, Log) ->
                        start_timer(Tmr, enquire_link_timer)}}.
 
 
-init_listen(Mod, Mc, LSock, Tmr, Log) ->
+init_listen(Mod, Mc, LSock, Tmr, Log, ProxyIpList) ->
     Self = self(),
-    Pid = spawn_link(smpp_session, wait_accept, [Self, LSock, Log]),
+    Pid = spawn_link(smpp_session, wait_accept, [Self, LSock, Log, ProxyIpList]),
     {ok, listen, #st{mc = Mc,
                      mod = Mod,
                      log = Log,
                      sock_ctrl = Pid,
                      req_tab = smpp_req_tab:new(),
                      op_tab = smpp_req_tab:new(),
-                     timers = Tmr}}.
+                     timers = Tmr,
+                     proxy_ip_list = ProxyIpList}}.
 
 
 terminate(Reason, _Stn, Std) ->
@@ -513,7 +516,7 @@ handle_event({sock_error, _Reason}, unbound, Std) ->
     {stop, normal, Std#st{sock = undefined}};
 handle_event({sock_error, Reason}, _Stn, Std) ->
     gen_tcp:close(Std#st.sock),
-    lager:info("session ~p closed by socket error ~p", [Std#st.mc, Reason]), 
+    lager:info("session ~p closed by socket error ~p", [Std#st.mc, Reason]),
     (Std#st.mod):handle_closed(Std#st.mc, Reason),
     {stop, normal, Std#st{sock = undefined}};
 handle_event({listen_error, Reason}, _Stn, Std) ->
@@ -543,9 +546,7 @@ handle_sync_event({reply, {SeqNum, Reply}}, _From, Stn, Std) ->
             Sock = Std#st.sock,
             Log = Std#st.log,
             case Reply of
-                {ok, PList1} ->
-                    PList2  = [{congestion_state, Std#st.congestion_state}],
-                    Params = smpp_operation:merge(PList1, PList2),
+                {ok, Params} ->
                     send_response(RespId, ?ESME_ROK, SeqNum, Params, Sock, Log);
                 {error, Error} ->
                     send_response(RespId, Error, SeqNum, [], Sock, Log)
@@ -627,9 +628,7 @@ handle_peer_operation({CmdId, Pdu}, St) ->
         noreply ->
             ok = smpp_req_tab:write(St#st.op_tab, {SeqNum, CmdId}),
             true;
-        {ok, PList1} ->
-            PList2  = [{congestion_state, St#st.congestion_state}],
-            Params = smpp_operation:merge(PList1, PList2),
+        {ok, Params} ->
             send_response(RespId, ?ESME_ROK, SeqNum, Params, Sock, Log),
             true;
         {error, Error} ->
