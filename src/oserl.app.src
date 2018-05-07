@@ -1,6 +1,6 @@
 {application, oserl, [
     {description, "Open SMPP Erlang Library"},
-    {vsn, "4.0.1"},
+    {vsn, "4.0.2"},
     {modules, [
         gen_esme_session,
         gen_esme,
