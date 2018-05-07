@@ -204,7 +204,7 @@ init_listen(Mod, Mc, LSock, Tmr, Log, ProxyIpList) ->
 
 terminate(Reason, _Stn, Std) ->
     lager:notice("gen_mc_session terminated with reason ~p", [Reason]),
-    exit(Std#st.sock_ctrl, kill),
+    exit(Std#st.sock_ctrl, Reason),
     if Std#st.sock == undefined -> ok; true -> gen_tcp:close(Std#st.sock) end.
 
 %%%-----------------------------------------------------------------------------
